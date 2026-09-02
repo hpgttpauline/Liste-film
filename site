@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ma CineRoue par Genre</title>
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; } /* Défilement fluide */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 { color: #f39c12; margin-bottom: 20px; }
+   
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+      max-width: 1100px;
+      width: 100%;
+    }
+
+    /* Section Liste */
+    .list-section {
+      flex: 1.2;
+      min-width: 320px;
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    input[type="text"], select {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: #2a2a2a;
+      color: #fff;
+    }
+    input[type="text"] { flex: 2; min-width: 140px; }
+    select { flex: 1; min-width: 120px; }
+
+    button.add-btn {
+      padding: 10px 15px;
+      background: #27ae60;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+   
+    .genre-group {
+      margin-bottom: 20px;
+    }
+    .genre-title {
+      font-size: 1.1rem;
+      color: #f39c12;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+    }
+
+    ul { list-style: none; padding: 0; margin: 0; }
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      background: #2a2a2a;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+   
+    /* Animation de rebond lent */
+    @keyframes bounceSlow {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* Style pour le film surligné en rose #FD3DB5 avec effet rebond */
+    li.highlighted {
+      border-color: #FD3DB5;
+      background: #4a1239;
+      box-shadow: 0 0 12px rgba(253, 61, 181, 0.5);
+      animation: bounceSlow 1.8s infinite ease-in-out;
+    }
+   
+    li.checked span {
+      text-decoration: line-through;
+      color: #777;
+    }
+    .delete-btn {
+      background: #c0392b;
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Section Roue */
+    .wheel-section {
+      flex: 1;
+      min-width: 300px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .wheel-container {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .arrow {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid #e74c3c;
+      z-index: 10;
+    }
+    #spin-btn {
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      background: #f39c12;
+      border: none;
+      color: white;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    #spin-btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎬 Ma CineRoue</h1>
+
+  <div class="container">
+    <div class="list-section">
+      <h2>Mes Films</h2>
+      <div class="input-group">
+        <input type="text" id="film-input" placeholder="Titre du film...">
+        <select id="genre-select">
+          <option value="Action / Aventure">Action / Aventure</option>
+          <option value="Comédie">Comédie</option>
+          <option value="Drame / Policier">Drame / Policier</option>
+          <option value="Science-Fiction">Science-Fiction</option>
+          <option value="Romance / Musical">Romance / Musical</option>
+          <option value="Horreur / Thriller">Horreur / Thriller</option>
+        </select>
+        <button class="add-btn" onclick="addFilm()">Ajouter</button>
+      </div>
+
+      <div id="categories-container"></div>
+    </div>
+
+    <div class="wheel-section">
+      <h2>Tirage au Sort</h2>
+      <div class="wheel-container">
+        <div class="arrow"></div>
+        <canvas id="wheel" width="300" height="300"></canvas>
+      </div>
+      <button id="spin-btn" onclick="spinWheel()">Lancer la roue !</button>
+    </div>
+  </div>
+
+  <script>
+    let films = [
+      { name: "Scarface", genre: "Drame / Policier", checked: false, highlighted: false },
+      { name: "Le Parrain", genre: "Drame / Policier", checked: false, highlighted: false },
+      { name: "Ghost", genre: "Romance / Musical", checked: false, highlighted: false },
+      { name: "Forrest Gump", genre: "Comédie", checked: false, highlighted: false },
+      { name: "Dirty Dancing", genre: "Romance / Musical", checked: false, highlighted: false },
+      { name: "Men in Black", genre: "Science-Fiction", checked: false, highlighted: false },
+      { name: "Retour vers le futur", genre: "Science-Fiction", checked: false, highlighted: false },
+      { name: "Project X", genre: "Comédie", checked: false, highlighted: false },
+      { name: "Alibi.com", genre: "Comédie", checked: false, highlighted: false },
+      { name: "La Ligne verte", genre: "Drame / Policier", checked: false, highlighted: false },
+      { name: "Le Hobbit", genre: "Action / Aventure", checked: false, highlighted: false },
+      { name: "The Truman Show", genre: "Comédie", checked: false, highlighted: false },
+      { name: "Grease", genre: "Romance / Musical", checked: false, highlighted: false },
+      { name: "Fight Club", genre: "Horreur / Thriller", checked: false, highlighted: false },
+      { name: "Jumanji", genre: "Action / Aventure", checked: false, highlighted: false },
+      { name: "Inception", genre: "Science-Fiction", checked: false, highlighted: false },
+      { name: "Pulp Fiction", genre: "Drame / Policier", checked: false, highlighted: false },
+      { name: "Seven", genre: "Horreur / Thriller", checked: false, highlighted: false },
+      { name: "Jurassic Park", genre: "Action / Aventure", checked: false, highlighted: false }
+    ];
+
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    let startAngle = 0;
+    let spinTimeout = null;
+    let spinAngleStart = 0;
+    let spinTime = 0;
+    let spinTimeTotal = 0;
+    const colors = ["#e74c3c", "#e67e22", "#f1c40f", "#2ecc71", "#1abc9c", "#3498db", "#9b59b6", "#34495e"];
+
+    function getActiveFilms() {
+      return films.filter(f => !f.checked);
+    }
+
+    function renderList() {
+      const container = document.getElementById("categories-container");
+      container.innerHTML = "";
+
+      const grouped = {};
+      films.forEach((film, index) => {
+        if (!grouped[film.genre]) grouped[film.genre] = [];
+        grouped[film.genre].push({ ...film, originalIndex: index });
+      });
+
+      for (const genre in grouped) {
+        const groupDiv = document.createElement("div");
+        groupDiv.className = "genre-group";
+       
+        const title = document.createElement("div");
+        title.className = "genre-title";
+        title.innerText = genre;
+        groupDiv.appendChild(title);
+
+        const ul = document.createElement("ul");
+        grouped[genre].forEach(film => {
+          const li = document.createElement("li");
+          if (film.checked) li.classList.add("checked");
+          if (film.highlighted) {
+            li.classList.add("highlighted");
+            li.id = "winner-item"; // Identifiant pour le scroll automatique
+          }
+
+          li.innerHTML = `
+            <label style="cursor:pointer;">
+              <input type="checkbox" ${film.checked ? "checked" : ""} onchange="toggleCheck(${film.originalIndex})">
+              <span>${film.name}</span>
+            </label>
+            <button class="delete-btn" onclick="deleteFilm(${film.originalIndex})">✕</button>
+          `;
+          ul.appendChild(li);
+        });
+
+        groupDiv.appendChild(ul);
+        container.appendChild(groupDiv);
+      }
+
+      drawWheel();
+    }
+
+    function addFilm() {
+      const input = document.getElementById("film-input");
+      const genreSelect = document.getElementById("genre-select");
+      const name = input.value.trim();
+      if (name) {
+        films.push({ name: name, genre: genreSelect.value, checked: false, highlighted: false });
+        input.value = "";
+        renderList();
+      }
+    }
+
+    function toggleCheck(index) {
+      films[index].checked = !films[index].checked;
+      if (films[index].checked) films[index].highlighted = false;
+      renderList();
+    }
+
+    function deleteFilm(index) {
+      films.splice(index, 1);
+      renderList();
+    }
+
+    function drawWheel() {
+      const activeFilms = getActiveFilms();
+      const numOptions = activeFilms.length;
+      const arc = Math.PI / (numOptions / 2);
+      const outsideRadius = 140;
+      const textRadius = 90;
+      const insideRadius = 0;
+
+      ctx.clearRect(0, 0, 300, 300);
+
+      if (numOptions === 0) {
+        ctx.fillStyle = "#fff";
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = "center";
+        ctx.fillText("Aucun film à tirer !", 150, 150);
+        return;
+      }
+
+      for (let i = 0; i < numOptions; i++) {
+        const angle = startAngle + i * arc;
+        ctx.fillStyle = colors[i % colors.length];
+
+        ctx.beginPath();
+        ctx.arc(150, 150, outsideRadius, angle, angle + arc, false);
+        ctx.arc(150, 150, insideRadius, angle + arc, angle, true);
+        ctx.fill();
+
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.translate(150 + Math.cos(angle + arc / 2) * textRadius, 150 + Math.sin(angle + arc / 2) * textRadius);
+        ctx.rotate(angle + arc / 2 + Math.PI / 2);
+        const text = activeFilms[i].name;
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = "center";
+        ctx.fillText(text.length > 18 ? text.substring(0, 15) + "..." : text, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function rotateWheel() {
+      spinTime += 16;
+      if (spinTime >= spinTimeTotal) {
+        stopRotateWheel();
+        return;
+      }
+      const spinAngle = spinAngleStart - easeOut(spinTime, 0, spinAngleStart, spinTimeTotal);
+      startAngle += (spinAngle * Math.PI / 180);
+      drawWheel();
+      spinTimeout = setTimeout(rotateWheel, 16);
+    }
+
+    function stopRotateWheel() {
+      clearTimeout(spinTimeout);
+      const activeFilms = getActiveFilms();
+      const numOptions = activeFilms.length;
+      const arc = Math.PI / (numOptions / 2);
+     
+      let degrees = startAngle * 180 / Math.PI + 90;
+      let arcd = arc * 180 / Math.PI;
+      let index = Math.floor((360 - (degrees % 360)) / arcd) % numOptions;
+
+      const winner = activeFilms[index];
+     
+      films.forEach(f => f.highlighted = false);
+      const originalIndex = films.findIndex(f => f.name === winner.name);
+      if (originalIndex !== -1) {
+        films[originalIndex].highlighted = true;
+      }
+
+      renderList();
+      document.getElementById("spin-btn").disabled = false;
+
+      // Défilement automatique vers le film tiré au sort
+      setTimeout(() => {
+        const winnerElement = document.getElementById("winner-item");
+        if (winnerElement) {
+          winnerElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+
+    function spinWheel() {
+      const activeFilms = getActiveFilms();
+      if (activeFilms.length === 0) return;
+
+      document.getElementById("spin-btn").disabled = true;
+     
+      // Vitesse initiale très rapide
+      spinAngleStart = Math.random() * 20 + 45;
+      spinTime = 0;
+     
+      // Animation courte (entre 1.2s et 1.7s)
+      spinTimeTotal = Math.random() * 500 + 1200;
+     
+      rotateWheel();
+    }
+
+    function easeOut(t, b, c, d) {
+      const ts = (t /= d) * t;
+      const tc = ts * t;
+      return b + c * (tc + -3 * ts + 3 * t);
+    }
+
+    renderList();
+  </script>
+</body>
+</html>
